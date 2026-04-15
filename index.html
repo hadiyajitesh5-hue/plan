@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My jee planner</title>
+</head>
+<body>
+
+<h2> My jee planner</h2>
+
+<input id="room" placeholder="Enter rcode">
+<button onclick="startCamera()">Start Camera (Phone)</button>
+<button onclick="watchCamera()">Watch Camera (Laptop)</button>
+
+<br><br>
+<video id="video" autoplay playsinline width="300" style="display:none;"></video>
+
+<script src="https://cdn.jsdelivr.net/npm/simple-peer@9/simplepeer.min.js"></script>
+
+<script src="https://unpkg.com/socket.io-client@4.0.1/dist/socket.io.min.js"></script>
+
+<script>
+const socket = io("https://signal-server-example.onrender.com"); // free signaling server
+
+let peer;
+
+function startCamera() {
+  const room = document.getElementById("room").value;
+
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  .then(stream => {
+    document.getElementById("video").srcObject = stream;
+
+    peer = new SimplePeer({ initiator: true, trickle: false, stream: stream });
+
+    peer.on('signal', data => {
+      socket.emit('join', { room: room, data: data });
+    });
+
+    socket.on('signal', data => {
+      peer.signal(data);
+    });
+  });
+}
+
+function watchCamera() {
+  const room = document.getElementById("room").value;
+
+  peer = new SimplePeer({ initiator: false, trickle: false });
+
+  peer.on('signal', data => {
+    socket.emit('join', { room: room, data: data });
+  });
+
+  socket.on('signal', data => {
+    peer.signal(data);
+  });
+
+  peer.on('stream', stream => {
+    document.getElementById("video").srcObject = stream;
+  });
+}
+</script>
+
+</body>
+</html>
